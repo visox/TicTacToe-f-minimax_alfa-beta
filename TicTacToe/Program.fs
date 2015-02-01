@@ -47,8 +47,8 @@ let rec diagonale1 (board, x, y) =
 let rec diagonale2 (board, x, y) =
     match (x,y) with
         | (xx, _) when xx = 0 -> Seq.empty
-        | (_, yy) when yy = 0 -> Seq.empty
-        | (xx,yy) -> Seq.append (diagonale2(board, xx-1, yy-1)) [fieldByXY(xx, yy, board)]
+        | (_, yy) when yy > boardSize -> Seq.empty
+        | (xx,yy) -> Seq.append (diagonale2(board, xx-1, yy+1)) [fieldByXY(xx, yy, board)]
 
 let rec horizontal (board, x, y) =
     match (x,y) with
@@ -124,30 +124,38 @@ let evalBoard(board) =
                     | false -> 0
 
 let rec maximum (board, prevMin, toEval, maximumCur) =
-    match toEval |> Seq.map(fun(x,y) -> minMove(oneMove(board, x, y, FieldStatus.player1), maximumCur)) |> Seq.head  with
-        | (eval, _, _) when eval >= prevMin || Seq.length toEval = 1 -> 
-            let (xx,yy) = toEval|> Seq.head
-            (max eval maximumCur, xx,yy)
-        | (eval, _, _) -> 
-            let (res, xx, yy) = maximum (board, prevMin, toEval |> Seq.skip 1, max eval maximumCur) 
-            match res with
-                | bigger when bigger > eval -> (res, xx, yy)
-                | smaller -> 
+    let (xx,yy) = toEval|> Seq.head
+    match hasWon(oneMove(board, xx, yy, FieldStatus.player1), FieldStatus.player1) with
+        | true -> (1, xx, yy)
+        | _ ->
+            match toEval |> Seq.map(fun(x,y) -> minMove(oneMove(board, x, y, FieldStatus.player1), maximumCur)) |> Seq.head  with
+                | (eval, _, _) when eval >= prevMin || Seq.length toEval = 1 -> 
                     let (xx,yy) = toEval|> Seq.head
-                    (eval, xx, yy)
+                    (max eval maximumCur, xx,yy)
+                | (eval, _, _) ->             
+                    let (res, xx, yy) = maximum (board, prevMin, toEval |> Seq.skip 1, max eval maximumCur) 
+                    match res with
+                        | bigger when bigger > eval -> (res, xx, yy)
+                        | smaller -> 
+                            let (xx,yy) = toEval|> Seq.head
+                            (eval, xx, yy)
 
 and minimum (board, prevMax, toEval, minimumCur) =
-    match toEval |> Seq.map(fun(x,y) -> maxMove(oneMove(board, x, y, FieldStatus.player2), minimumCur)) |> Seq.head  with
-        | (eval, _, _) when eval <= prevMax || Seq.length toEval = 1 -> 
-            let (xx,yy) = toEval|> Seq.head
-            (min eval minimumCur, xx,yy)
-        | (eval, _, _) -> 
-            let (res, xx, yy) = minimum (board, prevMax, toEval |> Seq.skip 1, min eval minimumCur)         
-            match res with
-                | smaller when smaller < eval -> (res, xx, yy)
-                | bigger -> 
+    let (xx,yy) = toEval|> Seq.head
+    match hasWon(oneMove(board, xx, yy, FieldStatus.player2), FieldStatus.player2) with
+        | true -> (-1, xx, yy)
+        | _ ->
+            match toEval |> Seq.map(fun(x,y) -> maxMove(oneMove(board, x, y, FieldStatus.player2), minimumCur)) |> Seq.head  with
+                | (eval, _, _) when eval <= prevMax || Seq.length toEval = 1 -> 
                     let (xx,yy) = toEval|> Seq.head
-                    (eval, xx, yy)
+                    (min eval minimumCur, xx,yy)
+                | (eval, _, _) ->             
+                    let (res, xx, yy) = minimum (board, prevMax, toEval |> Seq.skip 1, min eval minimumCur)         
+                    match res with
+                        | smaller when smaller < eval -> (res, xx, yy)
+                        | bigger -> 
+                            let (xx,yy) = toEval|> Seq.head
+                            (eval, xx, yy)
 
 
 and maxMove (board, prevMin) : (int* int* int) = 
@@ -168,9 +176,14 @@ and minMove (board, prevMax) : (int * int * int) =
 [<EntryPoint>]
 let main argv = 
     let board = initBoard
-    //let board = oneMove(board, 1,1, FieldStatus.player1)
-   // let board = oneMove(board, 2,2, FieldStatus.player1)
+    let board = oneMove(board, 1,1, FieldStatus.player1)
+    let board = oneMove(board, 2,2, FieldStatus.player2)
+    let board = oneMove(board, 1,2, FieldStatus.player1)
+    let board = oneMove(board, 3,2, FieldStatus.player2)
+    //let board = oneMove(board, 3,1, FieldStatus.player1)
+    //let board = oneMove(board, 2,1, FieldStatus.player2)
     //let board = oneMove(board, 3,3, FieldStatus.player1)
+    //let board = oneMove(board, 3,2, FieldStatus.player2)
    // let x = hasWonDiag1_1 (board, FieldStatus.player1) 
 
     let (won, x, y) = maxMove(board, 1)
